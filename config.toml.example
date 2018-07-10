@@ -1,0 +1,7 @@
+[database]
+server = "localhost"
+user = "thirdbot"
+password = ""
+
+[discord]
+token = ""
