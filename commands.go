@@ -18,7 +18,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 func help(s *discordgo.Session, m *discordgo.MessageCreate) {
 	resp := "**#leaders**\n"
-	resp += "Returns the rather unimportant list of first leaders.\n"
+	resp += "Returns the rather unimportant list of third leaders.\n"
 
 	sendMessage(s, m, resp)
 }
@@ -34,7 +34,8 @@ func leaders(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 	defer rows.Close()
 	resp := "**LEADERS**\n"
-	resp += "All the thirds!\n"
+	resp += config.Comments.getLeaderHeader() + "\n"
+	isFirst := true
 	for rows.Next() {
 		var count int
 		var userID string
@@ -46,7 +47,12 @@ func leaders(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if err != nil {
 			continue
 		}
-		resp += fmt.Sprintf("%s: %d\n%s\n", user.Username, count, "You're the thirdest!")
+		if !isFirst {
+			resp += fmt.Sprintf("%s: %d\n%s\n", user.Username, count, config.Comments.getLeaderComment())
+		} else {
+			resp += fmt.Sprintf("%s: %d\n%s\n", user.Username, count, config.Comments.getFirstComment())
+		}
+		isFirst = false
 	}
 	s.ChannelMessageSend(m.ChannelID, resp)
 }

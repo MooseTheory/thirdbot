@@ -1,7 +1,33 @@
 [database]
-server = "localhost"
-user = "thirdbot"
-password = ""
+Server = "127.0.0.1"
+DatabaseName = "thirdbot"
+User = "thirdbot"
+Password = ""
 
 [discord]
-token = ""
+Token = ""
+
+[comments]
+GotThird = [
+    "You're the OKest!",
+    "I'm sure your mother is proud of you.",
+    "Umm, congratulations I guess?",
+    "I'm sure firstbot would have a better comment for you.",
+    "Don't be so humble, you are not that great.",
+    "Contratulations for getting third in a useless competition!",
+]
+LeaderHeader = [
+    "Here's who is the most average!",
+    "These people aren't even good enough to win at losing.",
+    "I've run out of witty things to type here.",
+]
+FirstComments = [
+    "You're the thirdest!",
+    "It's OK, I don't love you either.",
+    "Firstbot is disappoint.",
+]
+LeaderComments = [
+    "They say the third movie in a sequel is the worst. You aren't even that good.",
+    "Whatever",
+    "I heard firstbot saying mean things about you the other day.",
+]

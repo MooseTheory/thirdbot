@@ -35,6 +35,7 @@ type DatabaseInfo struct {
 type Config struct {
 	Database DatabaseInfo
 	Discord  DiscordInfo
+	Comments CommentInfo
 }
 
 func init() {
@@ -109,7 +110,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func checkIfThird(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
-	s.ChannelMessageSend(m.ChannelID, "checking")
 	stmt, err := db.Prepare("SELECT COUNT(*) FROM thirds WHERE date BETWEEN ? AND ?")
 	if err != nil {
 		return err
@@ -124,10 +124,9 @@ func checkIfThird(s *discordgo.Session, m *discordgo.MessageCreate) (err error) 
 	}
 	if numResults == 0 {
 		err = addThird(s, m)
-		s.ChannelMessageSend(m.ChannelID, "You're third! Woo?")
+		s.ChannelMessageSend(m.ChannelID, config.Comments.getThirdComment())
 		return err
 	}
-	s.ChannelMessageSend(m.ChannelID, "NOBODY LOVES YOU!")
 	return
 }
 
