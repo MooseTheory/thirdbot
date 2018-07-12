@@ -72,7 +72,6 @@ func main() {
 		log.Fatalln("error connecting to database", err)
 	}
 
-	fmt.Println("Bot is now running. Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 	signal.Notify(sc)
@@ -89,6 +88,8 @@ func main() {
 			}
 		}
 	}()
+	setStatus(dg)
+	fmt.Println("Bot is now running. Press CTRL-C to exit.")
 
 	<-done
 	fmt.Println("Goodbye!")

@@ -105,6 +105,9 @@ func last(s *discordgo.Session, m *discordgo.MessageCreate) {
 		zonedDate := date.In(tz)
 		resp = fmt.Sprintf("The last third was %s on %s, at %s.", user.Username, zonedDate.Format("Jan 02"), zonedDate.Format("3:04PM"))
 	}
+	if resp == "" {
+		resp = "Ain't nobody been third yet! Slackers."
+	}
 	s.ChannelMessageSend(m.ChannelID, resp)
 }
 

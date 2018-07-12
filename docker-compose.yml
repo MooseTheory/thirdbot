@@ -1,0 +1,17 @@
+version: '3.6'
+
+services:
+  db:
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_DATABASE: thirdbot
+      MYSQL_USER: thirdbot
+      MYSQL_PASSWORD: E3K7dFxcz9LbCeRj
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+
+  thirdbot:
+    image: moosetheory/thirdbot:0.1.3
+    restart: always
+    volumes:
+      - "./config.toml:/config.toml"
