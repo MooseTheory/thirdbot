@@ -76,16 +76,27 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 	signal.Notify(sc)
-	//<-sc
+	ticker := time.NewTicker(5 * time.Minute)
 	go func() {
-		<-sc
-		dg.Close()
-		done <- true
+		for {
+			select {
+			case <-ticker.C:
+				// TIMER!
+				setStatus(dg)
+			case <-sc:
+				dg.Close()
+				done <- true
+			}
+		}
 	}()
 
 	<-done
 	fmt.Println("Goodbye!")
 	dg.Close()
+}
+
+func setStatus(dg *discordgo.Session) {
+	dg.UpdateStatus(0, "#help for a list of commands")
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -175,6 +186,7 @@ func getDbConn() (err error) {
 		Addr:   addr,
 	}
 	conf.AllowNativePasswords = true
+	conf.ParseTime = true
 	db, err = sql.Open("mysql", conf.FormatDSN())
 	if err != nil {
 		return err
