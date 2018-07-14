@@ -127,7 +127,14 @@ func checkIfThird(s *discordgo.Session, m *discordgo.MessageCreate) (err error) 
 		return err
 	}
 	now := time.Now()
-	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	tz, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		sendMessage(s, m, "I broke trying to do this!"+err.Error())
+		fmt.Println(err)
+		return
+	}
+	now = now.In(tz)
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz)
 	tomorrow := midnight.Add(time.Hour * 24)
 	numResults := 0
 	err = stmt.QueryRow(midnight, tomorrow).Scan(&numResults)
@@ -147,7 +154,15 @@ func addThird(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(m.Author.ID, time.Now())
+	now := time.Now()
+	tz, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		sendMessage(s, m, "I broke trying to do this!"+err.Error())
+		fmt.Println(err)
+		return
+	}
+	zonedDate := now.In(tz)
+	_, err = stmt.Exec(m.Author.ID, zonedDate)
 	if err != nil {
 		return err
 	}

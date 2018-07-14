@@ -38,7 +38,7 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func leaders(s *discordgo.Session, m *discordgo.MessageCreate) {
-	stmt, err := db.Prepare("SELECT COUNT(*) AS `count`, userid FROM thirds ORDER BY count")
+	stmt, err := db.Prepare("SELECT COUNT(*) AS `count`, userid FROM thirds GROUP BY userid ORDER BY count DESC")
 	if err != nil {
 		sendMessage(s, m, "I broke trying to do this!")
 		return
@@ -77,17 +77,21 @@ func last(s *discordgo.Session, m *discordgo.MessageCreate) {
 	stmt, err := db.Prepare("SELECT `userid`, `date` FROM `thirds` ORDER BY `date` DESC LIMIT 1")
 	if err != nil {
 		sendMessage(s, m, "I broke trying to do this! "+err.Error())
+		fmt.Println(err)
 		return
 	}
 	rows, err := stmt.Query()
 	if err != nil {
 		sendMessage(s, m, "I broke trying to do this!"+err.Error())
+		fmt.Println(err)
 		return
 	}
 	defer rows.Close()
 	var resp string
 	tz, err := time.LoadLocation("America/New_York")
 	if err != nil {
+		sendMessage(s, m, "I broke trying to do this!"+err.Error())
+		fmt.Println(err)
 		return
 	}
 	for rows.Next() {
@@ -100,6 +104,8 @@ func last(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		user, err := s.User(userID)
 		if err != nil {
+			sendMessage(s, m, "I broke trying to do this!"+err.Error())
+			fmt.Println(err)
 			continue
 		}
 		zonedDate := date.In(tz)
