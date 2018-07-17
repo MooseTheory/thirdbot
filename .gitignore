@@ -63,6 +63,9 @@ typings/
 # My config has secrets!
 config.toml
 config.toml.dev
+config.dev.toml
+thirdbot.dev.env
+thirdbot.env
 
 # No executables!
 thirdbot

@@ -4,10 +4,11 @@ services:
   db:
     image: mariadb
     restart: always
+    env_file:
+      - ./thirdbot.env
     environment:
       MYSQL_DATABASE: thirdbot
       MYSQL_USER: thirdbot
-      MYSQL_PASSWORD: E3K7dFxcz9LbCeRj
       MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
 
   thirdbot:

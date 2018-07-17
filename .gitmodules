@@ -1,0 +1,15 @@
+[submodule "bot/vendor/github.com/pelletier/go-toml"]
+	path = bot/vendor/github.com/pelletier/go-toml
+	url = https://github.com/pelletier/go-toml.git
+[submodule "bot/vendor/github.com/bwmarrin/discordgo"]
+	path = bot/vendor/github.com/bwmarrin/discordgo
+	url = https://github.com/bwmarrin/discordgo.git
+[submodule "bot/vendor/github.com/go-sql-driver/mysql"]
+	path = bot/vendor/github.com/go-sql-driver/mysql
+	url = https://github.com/go-sql-driver/mysql.git
+[submodule "bot/vendor/github.com/gorilla/websocket"]
+	path = bot/vendor/github.com/gorilla/websocket
+	url = https://github.com/gorilla/websocket.git
+[submodule "bot/vendor/golang.org/x/crypto"]
+	path = bot/vendor/golang.org/x/crypto
+	url = https://github.com/golang/crypto.git
