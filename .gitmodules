@@ -13,3 +13,30 @@
 [submodule "bot/vendor/golang.org/x/crypto"]
 	path = bot/vendor/golang.org/x/crypto
 	url = https://github.com/golang/crypto.git
+[submodule "web/vendor/github.com/pelletier/go-toml"]
+	path = web/vendor/github.com/pelletier/go-toml
+	url = https://github.com/pelletier/go-toml.git
+[submodule "web/vendor/github.com/go-sql-driver/mysql"]
+	path = web/vendor/github.com/go-sql-driver/mysql
+	url = https://github.com/go-sql-driver/mysql.git
+[submodule "web/vendor/github.com/bwmarrin/discordgo"]
+	path = web/vendor/github.com/bwmarrin/discordgo
+	url = https://github.com/bwmarrin/discordgo.git
+[submodule "web/vendor/github.com/gorilla/websocket"]
+	path = web/vendor/github.com/gorilla/websocket
+	url = https://github.com/gorilla/websocket.git
+[submodule "web/vendor/golang.org/x/crypto"]
+	path = web/vendor/golang.org/x/crypto
+	url = https://github.com/golang/crypto.git
+[submodule "bot/vendor/github.com/sirupsen/logrus"]
+	path = bot/vendor/github.com/sirupsen/logrus
+	url = https://github.com/sirupsen/logrus.git
+[submodule "bot/vendor/gopkg.in/gemnasium/logrus-graylog-hook.v2"]
+	path = bot/vendor/gopkg.in/gemnasium/logrus-graylog-hook.v2
+	url = https://github.com/gemnasium/logrus-graylog-hook.git
+[submodule "bot/vendor/github.com/pkg/errors"]
+	path = bot/vendor/github.com/pkg/errors
+	url = https://github.com/pkg/errors.git
+[submodule "bot/vendor/golang.org/x/sys"]
+	path = bot/vendor/golang.org/x/sys
+	url = https://github.com/golang/sys.git

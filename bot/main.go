@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -14,10 +13,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-sql-driver/mysql"
+
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/gemnasium/logrus-graylog-hook.v2"
 )
 
 var (
-	token  string
 	config Config
 	db     *sql.DB
 )
@@ -32,10 +33,15 @@ type DatabaseInfo struct {
 	Password     string
 	DatabaseName string
 }
+type GraylogInfo struct {
+	Host string
+	Port int
+}
 type Config struct {
 	Database DatabaseInfo
 	Discord  DiscordInfo
 	Comments CommentInfo
+	Graylog  GraylogInfo
 }
 
 func init() {
@@ -48,6 +54,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	hook := graylog.NewGraylogHook(fmt.Sprintf("%s:%d", config.Graylog.Host, config.Graylog.Port), map[string]interface{}{})
+	fmt.Printf("%s:%d\n", config.Graylog.Host, config.Graylog.Port)
+	log.AddHook(hook)
+	log.Info("Starting")
 }
 
 func main() {
