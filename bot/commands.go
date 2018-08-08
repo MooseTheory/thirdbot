@@ -18,6 +18,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		last(s, m)
 	case "me":
 		me(s, m)
+	case "status":
+		status(s, m)
 	}
 }
 
@@ -28,6 +30,8 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate) {
 	resp += "Returns the last person to get a third.\n"
 	resp += "**#me**\n"
 	resp += "Show how many thirds you have, if you're good enough for third.\n"
+	resp += "**#status**\n"
+	resp += "Show the requestor's status\n"
 	resp += "\n\n"
 	resp += "I'm not cool enough to make sure a first or second happened yet.\n"
 	resp += "I'm also not cool enough to wait until firstbot has reset for the day.\n"
@@ -35,6 +39,33 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate) {
 	resp += "https://i.imgur.com/mWNumm0.gif"
 
 	sendMessage(s, m, resp)
+}
+
+func status(s *discordgo.Session, m *discordgo.MessageCreate) {
+	g, err := s.Guild("218131283505709056")
+	if err != nil {
+		sendMessage(s, m, "I broke attempting to get the guild!")
+		fmt.Println(err)
+		return
+	}
+	resp := ""
+	for _, p := range g.Presences {
+		resp += fmt.Sprintf("%+v\n", p)
+		resp += fmt.Sprintf("%+v\n", *p.User)
+		user, err := s.User(p.User.ID)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		resp += fmt.Sprintf("%+v\n", user)
+		if p.Game != nil && p.User.ID == m.Author.ID {
+			resp += p.Game.Name + "\n"
+		}
+		if p.Game != nil {
+			resp += p.Game.Name + " not author\n"
+		}
+	}
+	s.ChannelMessageSend(m.ChannelID, resp)
 }
 
 func leaders(s *discordgo.Session, m *discordgo.MessageCreate) {

@@ -21,11 +21,15 @@ import (
 var (
 	config Config
 	db     *sql.DB
+	dg     *discordgo.Session
 )
 
+// DiscordInfo holds the config token for the discord bot.
 type DiscordInfo struct {
 	Token string
 }
+
+// DatabaseInfo holds the config information for the mariadb connection
 type DatabaseInfo struct {
 	Server       string
 	Port         int
@@ -33,15 +37,25 @@ type DatabaseInfo struct {
 	Password     string
 	DatabaseName string
 }
+
+// GraylogInfo holds configuration information for graylog.
 type GraylogInfo struct {
 	Host string
 	Port int
 }
+
+// Config holds the total configuration information.
 type Config struct {
 	Database DatabaseInfo
 	Discord  DiscordInfo
 	Comments CommentInfo
 	Graylog  GraylogInfo
+}
+
+type lastInfo struct {
+	UserID   string
+	UserName string
+	Date     time.Time
 }
 
 func init() {

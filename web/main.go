@@ -11,7 +11,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-sql-driver/mysql"
-	"github.com/pelletier/go-toml"
+	toml "github.com/pelletier/go-toml"
 )
 
 var (
@@ -20,9 +20,12 @@ var (
 	dg     *discordgo.Session
 )
 
+// DiscordInfo holds the config token for the discord bot.
 type DiscordInfo struct {
 	Token string
 }
+
+// DatabaseInfo holds the config information for the mariadb connection
 type DatabaseInfo struct {
 	Server       string
 	Port         int
@@ -30,6 +33,8 @@ type DatabaseInfo struct {
 	Password     string
 	DatabaseName string
 }
+
+// Config holds the total configuration information.
 type Config struct {
 	Database DatabaseInfo
 	Discord  DiscordInfo
@@ -63,6 +68,7 @@ func init() {
 
 func main() {
 	http.HandleFunc("/last", handleLast)
+	http.HandleFunc("/lasts", handleGetThirds)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(err)
@@ -106,6 +112,53 @@ func handleLast(w http.ResponseWriter, r *http.Request) {
 		last.UserName = user.Username
 	}
 	resp, err := json.Marshal(last)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(resp))
+}
+
+func handleGetThirds(w http.ResponseWriter, r *http.Request) {
+	stmt, err := db.Prepare("SELECT `userid`, `date` FROM `thirds` ORDER BY `date` DESC")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	rows, err := stmt.Query()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer rows.Close()
+	tz, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	//var lasts []lastInfo
+	lasts := []lastInfo{}
+	for rows.Next() {
+		var last lastInfo
+		var userID string
+		var date time.Time
+		err = rows.Scan(&userID, &date)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		user, err := dg.User(userID)
+		if err != nil {
+			fmt.Println("dg.User error")
+			fmt.Println(err)
+			continue
+		}
+		last.Date = date.In(tz)
+		last.UserID = userID
+		last.UserName = user.Username
+		lasts = append(lasts, last)
+	}
+	resp, err := json.Marshal(lasts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
