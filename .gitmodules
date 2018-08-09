@@ -40,3 +40,6 @@
 [submodule "bot/vendor/golang.org/x/sys"]
 	path = bot/vendor/golang.org/x/sys
 	url = https://github.com/golang/sys.git
+[submodule "thirdDb/vendor/github.com/go-sql-driver/mysql"]
+	path = thirdDb/vendor/github.com/go-sql-driver/mysql
+	url = https://github.com/go-sql-driver/mysql.git
