@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	log "github.com/sirupsen/logrus"
 )
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string) {
@@ -38,13 +39,13 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate) {
 	resp += "For now, you gotta deal with it. So. Deal with it.\n"
 	resp += "https://i.imgur.com/mWNumm0.gif"
 
-	sendMessage(s, m, resp)
+	sendWhisper(s, m, resp)
 }
 
 func status(s *discordgo.Session, m *discordgo.MessageCreate) {
 	g, err := s.Guild("218131283505709056")
 	if err != nil {
-		sendMessage(s, m, "I broke attempting to get the guild!")
+		sendWhisper(s, m, "I broke attempting to get the guild!")
 		fmt.Println(err)
 		return
 	}
@@ -65,106 +66,75 @@ func status(s *discordgo.Session, m *discordgo.MessageCreate) {
 			resp += p.Game.Name + " not author\n"
 		}
 	}
-	s.ChannelMessageSend(m.ChannelID, resp)
+	sendWhisper(s, m, resp)
 }
 
 func leaders(s *discordgo.Session, m *discordgo.MessageCreate) {
-	stmt, err := db.Prepare("SELECT COUNT(*) AS `count`, userid FROM thirds GROUP BY userid ORDER BY count DESC")
+	firsts, err := conn.GetLeaders()
 	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!")
+		log.Errorln("error getting leaders", err)
+		sendChatError(s, m, "error getting leaders")
 		return
 	}
-	rows, err := stmt.Query()
-	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!")
-		return
-	}
-	defer rows.Close()
 	resp := "**LEADERS**\n"
 	resp += config.Comments.getLeaderHeader() + "\n"
-	isFirst := true
-	for rows.Next() {
-		var count int
-		var userID string
-		err = rows.Scan(&count, &userID)
+
+	for i, rec := range firsts {
+		user, err := s.User(rec.UserID)
 		if err != nil {
 			continue
 		}
-		user, err := s.User(userID)
-		if err != nil {
-			continue
-		}
-		if !isFirst {
-			resp += fmt.Sprintf("%s: %d\n%s\n", user.Username, count, config.Comments.getLeaderComment())
+		if i == 0 {
+			resp += fmt.Sprintf("%s: %d\n%s\n", user.Username, rec.Count, config.Comments.getLeaderComment())
 		} else {
-			resp += fmt.Sprintf("%s: %d\n%s\n", user.Username, count, config.Comments.getFirstComment())
+			resp += fmt.Sprintf("%s: %d\n%s\n", user.Username, rec.Count, config.Comments.getFirstComment())
 		}
-		isFirst = false
 	}
-	s.ChannelMessageSend(m.ChannelID, resp)
+	sendChatMessage(s, m, resp)
 }
 
 func last(s *discordgo.Session, m *discordgo.MessageCreate) {
-	stmt, err := db.Prepare("SELECT `userid`, `date` FROM `thirds` ORDER BY `date` DESC LIMIT 1")
-	if err != nil {
-		sendMessage(s, m, "I broke trying to do this! "+err.Error())
-		fmt.Println(err)
-		return
-	}
-	rows, err := stmt.Query()
-	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!"+err.Error())
-		fmt.Println(err)
-		return
-	}
-	defer rows.Close()
 	var resp string
-	tz, err := time.LoadLocation("America/New_York")
+	rec, err := conn.GetLast()
 	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!"+err.Error())
-		fmt.Println(err)
+		log.Errorln("error getting last third", err)
+		sendChatError(s, m, "error getting last third")
 		return
 	}
-	for rows.Next() {
-		var userID string
-		var date time.Time
-		err = rows.Scan(&userID, &date)
+	if rec.UserID == "" {
+		resp = "Ain't nobody been third yet! Slackers."
+	} else {
+		user, err := s.User(rec.UserID)
 		if err != nil {
-			fmt.Println(err)
-			continue
+			log.Errorln("error getting username", err)
+			sendChatError(s, m, "error getting username")
+			return
 		}
-		user, err := s.User(userID)
+		tz, err := time.LoadLocation("America/New_York")
 		if err != nil {
-			sendMessage(s, m, "I broke trying to do this!"+err.Error())
-			fmt.Println(err)
-			continue
+			log.Errorln("error getting timezone", err)
+			sendChatError(s, m, "error getting timezone")
+			return
 		}
-		zonedDate := date.In(tz)
+		zonedDate := rec.Timestamp.In(tz)
 		resp = fmt.Sprintf("The last third was %s on %s, at %s.", user.Username, zonedDate.Format("Jan 02"), zonedDate.Format("3:04PM"))
 	}
-	if resp == "" {
-		resp = "Ain't nobody been third yet! Slackers."
-	}
-	s.ChannelMessageSend(m.ChannelID, resp)
+	sendChatMessage(s, m, resp)
 }
 
 func me(s *discordgo.Session, m *discordgo.MessageCreate) {
 	userID := m.Author.ID
 
-	stmt, err := db.Prepare("SELECT COUNT(*) FROM `thirds` WHERE `userid` = ?")
+	numResults, err := conn.GetUserLast(userID)
 	if err != nil {
-		sendMessage(s, m, "I broke trying to do this! "+err.Error())
-		return
-	}
-	var numResults int
-	err = stmt.QueryRow(userID).Scan(&numResults)
-	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!"+err.Error())
+		log.Errorln("error getting count", err)
+		sendChatError(s, m, "error getting count")
 		return
 	}
 	user, err := s.User(userID)
 	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!"+err.Error())
+		log.Errorln("error getting username", err)
+		sendChatError(s, m, "error getting username")
 		return
 	}
 	var resp string
@@ -177,15 +147,5 @@ func me(s *discordgo.Session, m *discordgo.MessageCreate) {
 	} else {
 		resp = fmt.Sprintf("Oh, I see %s, you think you're too good to get any thirds!", user.Username)
 	}
-	s.ChannelMessageSend(m.ChannelID, resp)
-}
-
-func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, resp string) {
-	s.ChannelMessageSend(m.ChannelID, "DM sent!")
-	userChan, err := s.UserChannelCreate(m.Author.ID)
-	if err != nil {
-		s.ChannelMessageSend(m.ChannelID, "Error sending message! I'm broken!")
-		return
-	}
-	s.ChannelMessageSend(userChan.ID, resp)
+	sendChatMessage(s, m, resp)
 }

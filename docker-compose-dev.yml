@@ -13,8 +13,8 @@ services:
 
   thirdbot:
     build:
-      context: ./bot
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile_bot
     image: moosetheory/thirdbot:dev
     restart: always
     volumes:
@@ -22,8 +22,8 @@ services:
   
   web:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile_web
     image: moosetheory/thirdbot_web:dev
     restart: always
     ports:

@@ -1,27 +1,28 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
+	"github.com/moosetheory/thirdbot/thirddb"
 	"github.com/pelletier/go-toml"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/go-sql-driver/mysql"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/gemnasium/logrus-graylog-hook.v2"
 )
 
 var (
-	config Config
-	db     *sql.DB
-	dg     *discordgo.Session
+	config     Config
+	conn       thirddb.ThirdConn
+	dg         *discordgo.Session
+	offsetTime time.Time
 )
 
 // DiscordInfo holds the config token for the discord bot.
@@ -69,7 +70,6 @@ func init() {
 		panic(err)
 	}
 	hook := graylog.NewGraylogHook(fmt.Sprintf("%s:%d", config.Graylog.Host, config.Graylog.Port), map[string]interface{}{})
-	fmt.Printf("%s:%d\n", config.Graylog.Host, config.Graylog.Port)
 	log.AddHook(hook)
 	log.Info("Starting")
 }
@@ -79,21 +79,18 @@ func main() {
 	if err != nil {
 		log.Fatalln("error creating Discord session", err)
 	}
-	err = getDbConn()
+	conn, err = thirddb.NewConn(config.Database.User, config.Database.Password,
+		config.Database.DatabaseName, "tcp", config.Database.Server,
+		config.Database.Port)
 	if err != nil {
 		log.Fatalln("error connecting to database", err)
 	}
-	defer db.Close()
 
 	dg.AddHandler(messageCreate)
 
 	err = dg.Open()
 	if err != nil {
 		log.Fatalln("error opening connection", err)
-	}
-	err = prepareDatabase()
-	if err != nil {
-		log.Fatalln("error connecting to database", err)
 	}
 
 	sc := make(chan os.Signal, 1)
@@ -137,99 +134,66 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.Contains(strings.ToLower(m.Content), "third") {
-		err := checkIfThird(s, m)
+		isThird, err := conn.CheckIfThird(offsetTime)
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, "Error logging your third! Sucks to be you.")
+			log.Errorln("error detecting third", err)
+			sendChatError(s, m, "error detecting if you are third")
 			return
+		}
+		if isThird {
+			err = pickNewOffset()
+			if err != nil {
+				log.Errorln("error getting time zone for third", err)
+				sendChatError(s, m, "error detecting if you are third")
+				return
+			}
+			err = conn.AddThird(m.Author.ID)
+			if err != nil {
+				log.Errorln("error adding third", err)
+				sendChatError(s, m, "error saving your third. Ha ha")
+				return
+			}
+			sendChatMessage(s, m, config.Comments.getThirdComment())
 		}
 	}
 }
 
-func checkIfThird(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
-	stmt, err := db.Prepare("SELECT COUNT(*) FROM thirds WHERE date BETWEEN ? AND ?")
-	if err != nil {
-		return err
-	}
+func pickNewOffset() (err error) {
 	now := time.Now()
 	tz, err := time.LoadLocation("America/New_York")
 	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!"+err.Error())
-		fmt.Println(err)
 		return
 	}
 	now = now.In(tz)
-	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz)
-	tomorrow := midnight.Add(time.Hour * 24)
-	numResults := 0
-	err = stmt.QueryRow(midnight, tomorrow).Scan(&numResults)
-	if err != nil {
-		return err
-	}
-	if numResults == 0 {
-		err = addThird(s, m)
-		s.ChannelMessageSend(m.ChannelID, config.Comments.getThirdComment())
-		return err
-	}
-	return
-}
-
-func addThird(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
-	stmt, err := db.Prepare("INSERT INTO thirds(userid, date) VALUES(?, ?)")
-	if err != nil {
-		return err
-	}
-	now := time.Now()
-	tz, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		sendMessage(s, m, "I broke trying to do this!"+err.Error())
-		fmt.Println(err)
-		return
-	}
-	zonedDate := now.In(tz)
-	_, err = stmt.Exec(m.Author.ID, zonedDate)
-	if err != nil {
-		return err
-	}
-
+	r := rand.New(rand.NewSource(now.UnixNano()))
+	hourOffset := r.Intn(3)
+	minuteOffset := r.Intn(60)
+	offsetTime = time.Date(now.Year(), now.Month(), now.Day(), hourOffset, minuteOffset, 0, 0, tz).AddDate(0, 0, 1)
 	return nil
 }
 
-var createThirdsStatement = "CREATE TABLE IF NOT EXISTS`thirds`(" +
-	"`id` int NOT NULL AUTO_INCREMENT," +
-	"`userid` varchar(64) NOT NULL," +
-	"`date` datetime NOT NULL," +
-	"PRIMARY KEY (`id`)" +
-	") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tracks Thirds';"
-
-func prepareDatabase() (err error) {
-	_, err = db.Exec(createThirdsStatement)
-	if err != nil {
-		return err
-	}
-	return
+func sendChatError(s *discordgo.Session, m *discordgo.MessageCreate, msg string) (err error) {
+	// Send errors
+	errMsg := "**ERROR:**\n"
+	errMsg += "`" + msg + "`"
+	_, err = s.ChannelMessageSend(m.ChannelID, msg)
+	return nil
 }
 
-func getDbConn() (err error) {
-	var addr string
-	if config.Database.Server != "" {
-		if config.Database.Port != 0 {
-			addr = fmt.Sprintf("%s:%d", config.Database.Server, config.Database.Port)
-		} else {
-			addr = config.Database.Server
-		}
-	}
-	conf := mysql.Config{
-		User:   config.Database.User,
-		Passwd: config.Database.Password,
-		DBName: config.Database.DatabaseName,
-		Net:    "tcp",
-		Addr:   addr,
-	}
-	conf.AllowNativePasswords = true
-	conf.ParseTime = true
-	db, err = sql.Open("mysql", conf.FormatDSN())
+func sendChatMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) (err error) {
+	// Send a message to chat
+	_, err = s.ChannelMessageSend(m.ChannelID, msg)
+	return err
+}
+
+func sendWhisper(s *discordgo.Session, m *discordgo.MessageCreate, msg string) (err error) {
+	// Send a whisper
+	s.ChannelMessageSend(m.ChannelID, "DM sent!")
+	userChan, err := s.UserChannelCreate(m.Author.ID)
 	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "Error sending message! I'm broken!")
 		return err
 	}
+	s.ChannelMessageSend(userChan.ID, msg)
 	return nil
 }
